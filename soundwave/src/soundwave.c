@@ -25,7 +25,7 @@ int main(int argc, char **argv)
             }
     else
     {
-        fprint(stderr, "Unknown command\n");
+        fprintf(stderr, "Unknown command\n");
         return 1;
     }
     return 0;
