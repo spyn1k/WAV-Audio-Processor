@@ -5,7 +5,7 @@
 /*ΣΚΕΛΕΤΟΣ*/
 int main(int argc, char **argv) 
 {
-    if( argv < 2)
+    if( argc < 2)
     {
         fprintf(stderr, "Usage %s command", argv[0]);
         return 1;
