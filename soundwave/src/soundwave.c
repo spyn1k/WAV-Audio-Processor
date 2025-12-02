@@ -3,6 +3,8 @@
 #include <string.h>
 #include <math.h>
 
+
+
     //Συναρτηση που διαβάζει 1 byte απτο stdin
     static int read_byte(void)
     {
@@ -58,19 +60,48 @@
         return 0;
     }
 
+
+
 /*ΣΚΕΛΕΤΟΣ*/
 int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων από τη γραμμή εντολών 
                                 //    argv = πίνακας συμβολοσειρών που περιέχει τα ορίσματα 
 {
     if( argc < 2) //Ελεγχος αν δωθει τουλαχιστον ενα ορισμα
     {
-        fprintf(stderr, "Usage %s command", argv[0]);
+        fprintf(stderr, "Usage %s <command>\n", argv[0]); //Μήνυμα χρησης
         return 1;
     }
 
-    if(strcmp(argv[1], "info") == 0) 
-    {
-        //υλοποιηση
+    if(strcmp(argv[1], "info") == 0)  //αν δωθει η εντολη info 
+    {   
+            unsigned char riff[4]; //4 bytes για RIFF
+
+                if(read_n(riff, 4) < 0 || strncmp((char*)riff, "RIFF", 4) != 0 )   //Διαβάζουμε 4 bytes και ελέγχουμε αν είναι RIFF
+                {
+                 fprintf(stderr, "Error! \"RIFF\" not found\n"); //Μηνυμα λάθους αν δε βρεθει
+                 return 1;
+                }
+
+            unsigned int file_size; //Μεγεθος του αρχείου 
+
+                if(read_u32(&file_size) < 0)
+                {
+                    fprintf(stderr, "Error! truncated file\n"); //Αν δεν υπαρχουν bytes -> ERROR 
+                    return 1;
+                }
+
+                printf("size of file: %u\n" , file_size); //Μεγεθος αρχειου 
+
+            unsigned char wave[4]; //4 bytes για WAVE 
+
+            if(read_n(wave,4) < 0 || strncmp((char*)wave, "WAVE", 4) != 0)
+            {
+                fprintf(stderr, "Error! \"WAVE\" not found\n");
+                return 1;
+            }
+
+        return 0;
+
     }
         else if (strcmp(argv[1], "rate") == 0) 
         {
