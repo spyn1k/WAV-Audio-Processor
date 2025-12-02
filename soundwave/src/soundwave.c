@@ -296,8 +296,72 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
         }
             else if(strcmp(argv[1], "channel") ==0)
             {
-                //υλοποιηση
-            }
+                if (argc < 3 )
+                {
+                    fprintf(stderr,"Missing channel option\n");
+                    return 1;
+                }
+
+                //Ελέγχω αν ο χρήστης ζήτησε left ή right.
+                int want_left = strcmp(argv[2], "left") == 0;
+                int want_right = strcmp(argv[2], "right") == 0;
+
+
+                if(!want_left && !want_right)
+                {
+                    fprintf(stderr,"Bad channel option\n");
+                    return 1;
+                }
+
+                if(read_header() < 0)
+                {
+                    return 1;
+                }
+
+                //Aν το αρχειο ειναι ηδη mono δεν κανω split
+                if (channels == 1)
+                {
+                    write_header();
+                    for (unsigned int i = 0; i < data_size; i++)
+                    {
+                        int c = read_byte();
+                        if (c < 0) return 1;
+                        putchar(c);
+                    }
+                }
+
+            unsigned int bps = bits_per_sample / 8;         //Για stereo υπολιγιζω bytes έχει καθε sample
+            unsigned int frames = data_size / (2 * bps);    //Για frames πόσα ζευγάρια left+right υπαρχουν συνολικα
+            
+
+            //εδω φτιαχνω νεο mono WAV
+            channels = 1;                                   //mono
+            block_align = bps;                              //mono frame = 1 sample*bps
+            bytes_per_sec = sample_rate * block_align;      
+            data_size = frames * bps;                       //νεο datasize για ενα καναλι μονο
+            file_size = 36 + data_size;                     //36 bytes header + chunk
+
+            //Γραφω το νεο mono header στην εξοδο
+            write_header();
+
+
+                //εδω γινεται το actual split 
+                //για καθε frame διαβαζω πρωτα lefta μετα right
+                for (unsigned int i = 0; i < frames; i++)
+                {
+                    read_n(left_buf, bps);
+                    read_n(right_buf, bps);
+
+                    if (want_left)
+                    {
+                        write_n(left_buf, bps);
+                    }
+                    else
+                    {
+                        write_n(right_buf, bps);
+                    }
+                }
+            }   
     else
     {
         fprintf(stderr, "Error! Not a valid command!\n");
