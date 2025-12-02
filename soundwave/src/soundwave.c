@@ -96,7 +96,7 @@ static int read_header(void)
         return -1;
     }
     //Αν λείπει το WAVE τότε το αρχείο δεν είναι έγκυρο
-    if (read_n(tag4, 4) < 0 || strncmp((char*)tag4,"WAVE", 4 ) != 0);
+    if (read_n(tag4, 4) < 0 || strncmp((char*)tag4,"WAVE", 4 ) != 0)
     {
         fprintf(stderr, "Error! \"WAVE\" not found\n");
         return -1;
@@ -135,7 +135,7 @@ static int read_header(void)
     if (read_u32(&bytes_per_sec) < 0) return -1;
     if (read_u16(&block_align) < 0) return -1;
     if (read_u16(&bits_per_sample) < 0) return -1;
-    
+
 
     //Αν δεν ταιριαζει ο παρακατω τύπος τοτε μαλλον το αρχειο ειναι κατεστραμμενο
     if (bytes_per_sec != sample_rate * block_align)
@@ -168,6 +168,44 @@ unsigned int expected = (bits_per_sample/8) * channels;
         return -1;
     }
 }   
+
+
+// Γράφει 2 bytes σε little endian
+static void write_u16(unsigned int value)
+{
+    unsigned char b[2];
+    b[0] = value & 0xFF;        // low byte
+    b[1] = (value >> 8) & 0xFF; // high byte
+    fwrite(b, 1, 2, stdout);
+}
+
+// Γράφει 4 bytes σε little endian
+static void write_u32(unsigned int value)
+{
+    unsigned char b[4];
+    b[0] = value & 0xFF;
+    b[1] = (value >> 8) & 0xFF;
+    b[2] = (value >> 16) & 0xFF;
+    b[3] = (value >> 24) & 0xFF;
+    fwrite(b, 1, 4, stdout);
+}
+
+static void write_header(void)
+{
+    printf("RIFF");                 //Γραφω το RIFF πρωτο για αναγνώριση του αρχείου
+    write_u32(file_size);           //Το συνολικο μεγεθσο του αρχειου
+    printf("WAVE");                 //Μπαινει μετα το RIFF παντα για να δηλωσει το format
+    printf("fmt ");                 //Απο τι αποτελέιται ο ηχος
+    write_u32(fmt_size);            //Πρέπει να είναι 16 για PCM
+    write_u16(audio_format);        /*raw uncompressed audio*/
+    write_u16(channels);            //1 = mono , 2 = stereo
+    write_u32(sample_rate);         //Πόσα δειγματα ανα sec αν λαθος τοτε ειναι sped up ή slowed down
+    write_u32(bytes_per_sec);       //sample_rate * block_align
+    write_u16(block_align);         //ποσα bytes ειναι ενα audio frame , (channels * bits_per_sample/8)
+    write_u16(bits_per_sample);     //8bit ή 16bit
+    printf("data");                 //δειχνει πως κατω απο αυτο ξεκινανε τα raw samples
+    write_u32(data_size);           //Ποσα bytes ηχου θα ακολουθησουν μετα το header
+}
 
 
 /*ΣΚΕΛΕΤΟΣ*/
