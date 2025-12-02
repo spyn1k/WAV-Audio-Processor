@@ -3,16 +3,36 @@
 #include <string.h>
 #include <math.h>
 
+unsigned int file_size;
+unsigned int fmt_size;
+unsigned int audio_format;
+unsigned int channels;
+unsigned int sample_rate;
+unsigned int bytes_per_sec;
+unsigned int block_align;
+unsigned int bits_per_sample;
+unsigned int data_size;
 
 
-    //Συναρτηση που διαβάζει 1 byte απτο stdin
-    static int read_byte(void)
+unsigned char tag4[4];
+unsigned char tag2[2];
+unsigned char left_buf[4];
+unsigned char right_buf[4];
+
+
+/*---READ FUNCTIONS---*/
+
+//Συναρτηση που διαβάζει 1 byte απτο stdin
+static int read_byte(void)
     {
         int c = getchar();
-        if (c == EOF) return -1; //value of EOF is -1
 
-        return c & 0xFF; /* Το getchar μπορεί να επιστρεψει αρνητικες τιμές για bytes >127
-                            και με το & 0xFF κρατάμε μόνο τα χαμηλά 8 bits ώστε να γίνουν 0–255 */
+        if (c == EOF) 
+        {
+            return -1; //value of EOF is -1
+        } 
+
+        return c & 0xFF; /* με το & 0xFF κρατάμε μόνο τα χαμηλά 8 bits ώστε να γίνουν 0–255 */
     }
 
     //Διαβάζει n bytes από το stdin και τα αποθηκεύει στο buffer
@@ -22,9 +42,10 @@
         {
             int b= read_byte(); //παιρνουμε 1 byte , επισης int ωστε να ελεγχουμε EOF
 
-            if (b < 0) //δεν υπαρχουν αρκετά bytes για να καλυψουν τα n που ζητήσαμε 
-            return -1;
-
+            if (b < 0) //Aν δεν υπαρχουν αρκετά bytes για να καλυψουν τα n που ζητήσαμε 
+            {
+                return -1;
+            }
             buf[i] = (unsigned char)b; //Αποθηκευομε byte στον buffer Το κάνουμε cast σε unsigned char για να μην βγει αρνητικος)
         }
 
@@ -74,25 +95,25 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
 
     if(strcmp(argv[1], "info") == 0)  //αν δωθει η εντολη info 
     {   
-            unsigned char riff[4]; //4 bytes για RIFF
+        unsigned char riff[4]; //4 bytes για RIFF
 
-                if(read_n(riff, 4) < 0 || strncmp((char*)riff, "RIFF", 4) != 0 )   //Διαβάζουμε 4 bytes και ελέγχουμε αν είναι RIFF
-                {
-                 fprintf(stderr, "Error! \"RIFF\" not found\n"); //Μηνυμα λάθους αν δε βρεθει
-                 return 1;
-                }
+            if(read_n(riff, 4) < 0 || strncmp((char*)riff, "RIFF", 4) != 0 )   //Διαβάζουμε 4 bytes και ελέγχουμε αν είναι RIFF
+            {
+             fprintf(stderr, "Error! \"RIFF\" not found\n"); //Μηνυμα λάθους αν δε βρεθει
+             return 1;
+            }
 
-            unsigned int file_size; //Μεγεθος του αρχείου 
+        unsigned int file_size; //Μεγεθος του αρχείου 
 
-                if(read_u32(&file_size) < 0)
-                {
-                    fprintf(stderr, "Error! truncated file\n"); //Αν δεν υπαρχουν bytes -> ERROR 
-                    return 1;
-                }
+            if(read_u32(&file_size) < 0)
+            {
+                fprintf(stderr, "Error! truncated file\n"); //Αν δεν υπαρχουν bytes -> ERROR 
+                return 1;
+            }
 
-                printf("size of file: %u\n" , file_size); //Μεγεθος αρχειου 
+            printf("size of file: %u\n" , file_size); //Μεγεθος αρχειου 
 
-            unsigned char wave[4]; //4 bytes για WAVE 
+        unsigned char wave[4]; //4 bytes για WAVE 
 
             if(read_n(wave,4) < 0 || strncmp((char*)wave, "WAVE", 4) != 0)
             {
@@ -118,4 +139,3 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
     }
     return 0;
 }
-
