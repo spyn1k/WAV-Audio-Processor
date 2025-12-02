@@ -123,7 +123,7 @@ static int read_header(void)
     }
     //Mono και Stereo ειναι οι μονες επιλογές 
     if(read_u16(&channels) < 0) return -1;
-    if(!(channels == 1) || (channels == 2))
+    if(!(channels == 1) && (channels == 2))
     {
         fprintf(stderr, "mono/stereo should be on 1 or 2\n");
         return 1;
@@ -246,7 +246,22 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                 return 1;
             }
 
-        return 0;
+                
+            if (read_header() < 0)
+            {
+                return 1;
+            }
+
+            printf("size of format chunk: %u\n", fmt_size);
+            printf("WAVE type format: %u\n", audio_format);
+            printf("mono/stereo: %u\n", channels);
+            printf("sample rate: %u\n", sample_rate);
+            printf("bytes/sec: %u\n", bytes_per_sec);
+            printf("block alignment: %u\n", block_align);
+            printf("bits/sample: %u\n", bits_per_sample);
+            printf("size of data chunk: %u\n", data_size);
+
+            return 0;
 
     }
         else if (strcmp(argv[1], "rate") == 0) 
