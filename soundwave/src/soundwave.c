@@ -181,7 +181,9 @@ static void write_u16(unsigned int value)
 
 // Γράφει 4 bytes σε little endian
 static void write_u32(unsigned int value)
+
 {
+    
     unsigned char b[4];
     b[0] = value & 0xFF;
     b[1] = (value >> 8) & 0xFF;
@@ -189,7 +191,10 @@ static void write_u32(unsigned int value)
     b[3] = (value >> 24) & 0xFF;
     fwrite(b, 1, 4, stdout);
 }
-
+static void write_n(unsigned char *buf, int n)
+{
+    fwrite(buf, 1, n, stdout);
+}
 static void write_header(void)
 {
     printf("RIFF");                 //Γραφω το RIFF πρωτο για αναγνώριση του αρχείου
