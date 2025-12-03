@@ -20,11 +20,13 @@ gcc -Ofast -Wall -Wextra -Werror -pedantic -o soundwave soundwave.c -lm
 Αλλαγή sample rate 
 -
 ./soundwave rate 0.5 < input.wav > out.wav
+
 ./soundwave rate 2.0 < input.wav > out.wav
 
 Εξαγωγή καναλιού
 -
 ./soundwave channel left < stereo.wav > left.wav
+
 ./soundwave channel right < stereo.wav > right.wav
 
                                                          Έλεγχοι Εγκυρότητας WAV
