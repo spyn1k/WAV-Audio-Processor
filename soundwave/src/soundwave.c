@@ -167,6 +167,7 @@ unsigned int expected = (bits_per_sample/8) * channels;
         fprintf(stderr, "Error! cannot read data size\n");
         return -1;
     }
+    return 0;
 }   
 
 
