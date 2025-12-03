@@ -232,9 +232,8 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
 
     if(strcmp(argv[1], "info") == 0)  //αν δωθει η εντολη info 
     {   
-        if (strcmp(argv[1], "info") == 0)
     {
-        if (read_header() < 0) return -1;
+        if (read_header() < 0) return 1;
 
         printf("size of file: %u\n", file_size);
         printf("size of format chunk: %u\n", fmt_size);
@@ -256,12 +255,12 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
             if(argc < 3)
             {
                 fprintf(stderr, "Missing factor\n");
-                    return -1;
+                    return 1;
             }
             double factor = atof(argv[2]); //για να υποστηρίζει δεκαδικους
         
 
-        if(read_header() < 0) return -1;
+        if(read_header() < 0) return 1;
 
             sample_rate = (unsigned int)(sample_rate*factor); //Αυτό πρακτικά κάνει τον hχο πιο γρήγορο ή πιο αργo
 
@@ -275,7 +274,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
             for (unsigned int i = 0; i < data_size; i++)
             {
                 int c = read_byte();
-                if (c < 0) return -1;
+                if (c < 0) return 1;
 
                 putchar(c);
             }
@@ -285,7 +284,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                 if (argc < 3 )
                 {
                     fprintf(stderr,"Missing channel option\n");
-                    return -1;
+                    return 1;
                 }
 
                 //Ελέγχω αν ο χρήστης ζήτησε left ή right.
@@ -296,12 +295,12 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                 if(!want_left && !want_right)
                 {
                     fprintf(stderr,"Bad channel option\n");
-                    return -1;
+                    return 1;
                 }
 
                 if(read_header() < 0)
                 {
-                    return -1;
+                    return 1;
                 }
 
                 //Aν το αρχειο ειναι ηδη mono δεν κανω split
@@ -311,7 +310,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                     for (unsigned int i = 0; i < data_size; i++)
                     {
                         int c = read_byte();
-                        if (c < 0) return -1;
+                        if (c < 0) return 1;
                         putchar(c);
                     }
                 }
