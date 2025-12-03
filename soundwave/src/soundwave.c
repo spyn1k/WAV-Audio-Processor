@@ -126,7 +126,7 @@ static int read_header(void)
     if(!(channels == 1) && (channels == 2))
     {
         fprintf(stderr, "mono/stereo should be on 1 or 2\n");
-        return 1;
+        return -1;
     }
 
 
@@ -226,48 +226,22 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
 
     if(strcmp(argv[1], "info") == 0)  //αν δωθει η εντολη info 
     {   
-        unsigned char riff[4]; //4 bytes για RIFF
+        if (strcmp(argv[1], "info") == 0)
+    {
+        if (read_header() < 0) return 1;
 
-            if(read_n(riff, 4) < 0 || strncmp((char*)riff, "RIFF", 4) != 0 )   //Διαβάζουμε 4 bytes και ελέγχουμε αν είναι RIFF
-            {
-             fprintf(stderr, "Error! \"RIFF\" not found\n"); //Μηνυμα λάθους αν δε βρεθει
-             return 1;
-            }
+        printf("size of file: %u\n", file_size);
+        printf("size of format chunk: %u\n", fmt_size);
+        printf("WAVE type format: %u\n", audio_format);
+        printf("mono/stereo: %u\n", channels);
+        printf("sample rate: %u\n", sample_rate);
+        printf("bytes/sec: %u\n", bytes_per_sec);
+        printf("block alignment: %u\n", block_align);
+        printf("bits/sample: %u\n", bits_per_sample);
+        printf("size of data chunk: %u\n", data_size);
+        return 0;
+    }
 
-        unsigned int file_size; //Μεγεθος του αρχείου 
-
-            if(read_u32(&file_size) < 0)
-            {
-                fprintf(stderr, "Error! truncated file\n"); //Αν δεν υπαρχουν bytes -> ERROR 
-                return 1;
-            }
-
-            printf("size of file: %u\n" , file_size); //Μεγεθος αρχειου 
-
-        unsigned char wave[4]; //4 bytes για WAVE 
-
-            if(read_n(wave,4) < 0 || strncmp((char*)wave, "WAVE", 4) != 0)
-            {
-                fprintf(stderr, "Error! \"WAVE\" not found\n");
-                return 1;
-            }
-
-
-            if (read_header() < 0)
-            {
-                return 1;
-            }
-
-            printf("size of format chunk: %u\n", fmt_size);
-            printf("WAVE type format: %u\n", audio_format);
-            printf("mono/stereo: %u\n", channels);
-            printf("sample rate: %u\n", sample_rate);
-            printf("bytes/sec: %u\n", bytes_per_sec);
-            printf("block alignment: %u\n", block_align);
-            printf("bits/sample: %u\n", bits_per_sample);
-            printf("size of data chunk: %u\n", data_size);
-
-            return 0;
 
     }
         else if (strcmp(argv[1], "rate") == 0) 
