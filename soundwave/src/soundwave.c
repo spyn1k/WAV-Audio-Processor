@@ -123,7 +123,7 @@ static int read_header(void)
     }
     //Mono και Stereo ειναι οι μονες επιλογές 
     if(read_u16(&channels) < 0) return -1;
-    if(!(channels == 1) && (channels == 2))
+    if(!(channels == 1 || channels == 2))
     {
         fprintf(stderr, "mono/stereo should be on 1 or 2\n");
         return -1;
@@ -136,12 +136,18 @@ static int read_header(void)
     if (read_u16(&block_align) < 0) return -1;
     if (read_u16(&bits_per_sample) < 0) return -1;
 
+    if (bits_per_sample != 8 && bits_per_sample != 16)
+    {
+        fprintf(stderr, "Error! bits per sample should be 8 or 16\n");
+        return -1;
+    }
+
 
     //Αν δεν ταιριαζει ο παρακατω τύπος τοτε μαλλον το αρχειο ειναι κατεστραμμενο
     if (bytes_per_sec != sample_rate * block_align)
     {
         fprintf(stderr,"Error! bytes/second should be sample rate x block alignment\n");
-        return 1;
+        return -1;
     }
 
 
@@ -150,7 +156,7 @@ unsigned int expected = (bits_per_sample/8) * channels;
     if(block_align != expected)
     {
         fprintf(stderr,"Error! block alignment should be bits per sample / 8 x mono/stereo\n");
-        return 1;
+        return -1;
     }
 
 
@@ -165,7 +171,7 @@ unsigned int expected = (bits_per_sample/8) * channels;
      if (read_u32(&data_size) < 0)
     {
         fprintf(stderr, "Error! cannot read data size\n");
-        return -1;
+        return -1;  
     }
     return 0;
 }   
@@ -221,14 +227,14 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
     if( argc < 2) //Ελεγχος αν δωθει τουλαχιστον ενα ορισμα
     {
         fprintf(stderr, "Usage %s <command>\n", argv[0]); //Μήνυμα χρησης
-        return 1;
+        return -1;
     }
 
     if(strcmp(argv[1], "info") == 0)  //αν δωθει η εντολη info 
     {   
         if (strcmp(argv[1], "info") == 0)
     {
-        if (read_header() < 0) return 1;
+        if (read_header() < 0) return -1;
 
         printf("size of file: %u\n", file_size);
         printf("size of format chunk: %u\n", fmt_size);
@@ -250,12 +256,12 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
             if(argc < 3)
             {
                 fprintf(stderr, "Missing factor\n");
-                    return 1;
+                    return -1;
             }
             double factor = atof(argv[2]); //για να υποστηρίζει δεκαδικους
         
 
-        if(read_header() < 0) return 1;
+        if(read_header() < 0) return -1;
 
             sample_rate = (unsigned int)(sample_rate*factor); //Αυτό πρακτικά κάνει τον hχο πιο γρήγορο ή πιο αργo
 
@@ -269,7 +275,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
             for (unsigned int i = 0; i < data_size; i++)
             {
                 int c = read_byte();
-                if (c < 0) return 1;
+                if (c < 0) return -1;
 
                 putchar(c);
             }
@@ -279,7 +285,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                 if (argc < 3 )
                 {
                     fprintf(stderr,"Missing channel option\n");
-                    return 1;
+                    return -1;
                 }
 
                 //Ελέγχω αν ο χρήστης ζήτησε left ή right.
@@ -290,12 +296,12 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                 if(!want_left && !want_right)
                 {
                     fprintf(stderr,"Bad channel option\n");
-                    return 1;
+                    return -1;
                 }
 
                 if(read_header() < 0)
                 {
-                    return 1;
+                    return -1;
                 }
 
                 //Aν το αρχειο ειναι ηδη mono δεν κανω split
@@ -305,7 +311,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                     for (unsigned int i = 0; i < data_size; i++)
                     {
                         int c = read_byte();
-                        if (c < 0) return 1;
+                        if (c < 0) return -1;
                         putchar(c);
                     }
                 }
@@ -345,7 +351,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
     else
     {
         fprintf(stderr, "Error! Not a valid command!\n");
-        return 1;
+        return -1;
     }
     return 0;
 }
