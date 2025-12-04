@@ -19,6 +19,8 @@ unsigned char tag2[2];
 unsigned char left_buf[4];
 unsigned char right_buf[4];
 
+int header_error=0;
+char header_error_msg[128];
 
 /*---READ FUNCTIONS---*/
 
@@ -86,68 +88,100 @@ static int read_header(void)
     //Αν δεν βρω RIFF σημαίνει ότι δεν είναι WAV αρχείο επομενως τελειωνει το προγραμμα
     if (read_n(tag4, 4) < 0 || strncmp((char*)tag4, "RIFF", 4) != 0) 
     {
-        fprintf(stderr,"Error! \"RIFF\" not found\n");
-        return -1;
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! \"RIFF\" not found");
+        }
     }
+
     //Διαβάζω file size για να ξέρω το συνολικο περιεχόμενο μετα το header
     if (read_u32(&file_size) < 0)
     {
-        fprintf(stderr, "Error! truncated file\n");
-        return -1;
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! truncated file");
+        }
     }
+
     //Αν λείπει το WAVE τότε το αρχείο δεν είναι έγκυρο
     if (read_n(tag4, 4) < 0 || strncmp((char*)tag4,"WAVE", 4 ) != 0)
     {
-        fprintf(stderr, "Error! \"WAVE\" not found\n");
-        return -1;
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! \"WAVE\" not found");
+        }
     }
     //Να υπάρχει παντα fmt
      if (read_n(tag4, 4) < 0 || strncmp((char*)tag4, "fmt ", 4) != 0)
     {
-        fprintf(stderr, "Error! \"fmt \" not found\n");
-        return -1;
+         if (!header_error) 
+         {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! \"fmt\" not found");
+        }
     }
+
     //Το fmt chunk πρέπει να έχει μέγεθος 16 σε απλό PCM if not then corrupted file
-    if (read_u32(&fmt_size) < 0) return -1;
+    if (read_u32(&fmt_size) < 0) return 0;
     if (fmt_size != 16)
     {
-        fprintf(stderr, "Error! the size of format chunk should be 16\n");
-        return -1;
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! the size of format chunk should be 16");
+        }
     }
+
     //audio_format = 1 σημαίνει uncompressed PCM
-    if(read_u16(&audio_format) < 0 ) return -1;
+    if(read_u16(&audio_format) < 0 ) return 0;
     if(audio_format != 1)
     {
-        fprintf(stderr, "Error! WAVE type format should be 1\n");
-        return -1;
+       if (!header_error) 
+       {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! WAVE type format should be 1");
+        }
     }
+
     //Mono και Stereo ειναι οι μονες επιλογές 
-    if(read_u16(&channels) < 0) return -1;
+    if(read_u16(&channels) < 0) return 0;
     if(!(channels == 1 || channels == 2))
     {
-        fprintf(stderr, "mono/stereo should be on 1 or 2\n");
-        return -1;
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! mono/stereo should be 1 or 2");
+        }
     }
 
 
     /*must για να ειναι λειτουργικος ο τροπος του rate/channel*/
-    if (read_u32(&sample_rate) < 0) return -1;      
-    if (read_u32(&bytes_per_sec) < 0) return -1;
-    if (read_u16(&block_align) < 0) return -1;
-    if (read_u16(&bits_per_sample) < 0) return -1;
+    read_u32(&sample_rate);     
+    read_u32(&bytes_per_sec);
+    read_u16(&block_align);
+    read_u16(&bits_per_sample);
 
     if (bits_per_sample != 8 && bits_per_sample != 16)
     {
-        fprintf(stderr, "Error! bits per sample should be 8 or 16\n");
-        return -1;
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! bits per sample should be 8 or 16");
+        }
     }
 
 
     //Αν δεν ταιριαζει ο παρακατω τύπος τοτε μαλλον το αρχειο ειναι κατεστραμμενο
     if (bytes_per_sec != sample_rate * block_align)
     {
-        fprintf(stderr,"Error! bytes/second should be sample rate x block alignment\n");
-        return -1;
+       if (!header_error) 
+       {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! bytes/second should be sample rate x block alignment");
+        }
     }
 
 
@@ -155,23 +189,32 @@ static int read_header(void)
 unsigned int expected = (bits_per_sample/8) * channels;
     if(block_align != expected)
     {
-        fprintf(stderr,"Error! block alignment should be bits per sample / 8 x mono/stereo\n");
-        return -1;
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! block alignment should be bits per sample / 8 x mono/stereo");
+        }
     }
 
 
     /*Αν δεν υπάρχει data chunk δεν υπαρχουν audio samples*/
     if (read_n(tag4, 4) < 0 || strncmp((char*)tag4, "data", 4) != 0)
     {
-        fprintf(stderr, "Error! \"data\" not found\n");
-        return -1;
+        if (!header_error) 
+        {   
+            header_error = 1;
+            strcpy(header_error_msg, "Error! \"data\" not found");
+        }
     }
 
     //raw sample data size για rate και channel
      if (read_u32(&data_size) < 0)
     {
-        fprintf(stderr, "Error! cannot read data size\n");
-        return -1;  
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! cannot read data size");
+        }
     }
     return 0;
 }   
@@ -243,6 +286,13 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
         printf("block alignment: %u\n", block_align);
         printf("bits/sample: %u\n", bits_per_sample);
         printf("size of data chunk: %u\n", data_size);
+
+         if (header_error) 
+        {
+            printf("%s\n", header_error_msg);
+            return -1;
+        }
+
         return 0;
     }
 
