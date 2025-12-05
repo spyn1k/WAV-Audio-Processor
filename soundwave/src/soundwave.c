@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
+/*--GLOBAL VARIABLES--*/
 unsigned int file_size;
 unsigned int fmt_size;
 unsigned int audio_format;
@@ -13,18 +13,18 @@ unsigned int block_align;
 unsigned int bits_per_sample;
 unsigned int data_size;
 
-
-unsigned char tag4[4];
+//Buffers to store raw bytes before converting them because WAV is a binary format
+unsigned char tag4[4];    
 unsigned char tag2[2];
 unsigned char left_buf[4];
 unsigned char right_buf[4];
 
-int header_error=0;
-char header_error_msg[128];
+int header_error=0; //header error 
+char header_error_msg[128]; //buffer for the header error message
 
 /*---READ FUNCTIONS---*/
 
-//Συναρτηση που διαβάζει 1 byte απτο stdin
+//Function that reads 1 byte from stdin
 static int read_byte(void)
     {
         int c = getchar();
@@ -37,45 +37,45 @@ static int read_byte(void)
         return c & 0xFF; /* με το & 0xFF κρατάμε μόνο τα χαμηλά 8 bits ώστε να γίνουν 0–255 */
     }
 
-    //Διαβάζει n bytes από το stdin και τα αποθηκεύει στο buffer
+    //Reads n bytes from stdin and stores them in the buffer
     static int read_n(unsigned char *buf, int n)
     {
-        for (int i=0; i < n; i++) //βάζω κάθε byte στο buf[i]
+        for (int i=0; i < n; i++) //Stores every byte in buf[i]
         {
-            int b= read_byte(); //παιρνουμε 1 byte , επισης int ωστε να ελεγχουμε EOF
+            int b= read_byte(); //gets 1 byte , also int so that we check for EOF
 
-            if (b < 0) //Aν δεν υπαρχουν αρκετά bytes για να καλυψουν τα n που ζητήσαμε 
+            if (b < 0) //In case there aren't enough bytes to cover the n bytes which was asked 
             {
                 return -1;
             }
-            buf[i] = (unsigned char)b; //Αποθηκευομε byte στον buffer Το κάνουμε cast σε unsigned char για να μην βγει αρνητικος)
+            buf[i] = (unsigned char)b; //Stores byte in the buffer, we change it to unsigned char so that it doesnt come out negative
         }
 
         return 0;
     }
 
-    //Διαβάζει 2 bytes και τα μετατρεπει σε little endian (unsigned 16bit αριθμό)
+    //Reads 2 bytes and converts them into the form of little endian (unsigned 16bit number)
     static int read_u16(unsigned int *out)
     {
-        unsigned char b[2]; //Δημιουργούμε buffer για τα 2 bytes (b[0] = low byte, b[1] = high byte). 
+        unsigned char b[2]; //Create a buffer for the 2 bytes (b[0] = low byte, b[1] = high byte). 
 
         if (read_n(b , 2) < 0)  
-        return -1;  // Αν δεν μπορέσαμε να διαβάσουμε 2 bytes
+        return -1;  // In case we cant read 2 bytes
 
-        *out = b[0] | (b[1] << 8); //Συνδυάζουμε τα δύο bytes σε έναν 16-bit αριθμό.
+        *out = b[0] | (b[1] << 8); //Combine the two bytes into a 16-bit number.
         return 0;
     }
 
-    //Διαβάζει 4 bytes και τα μετατρεπει σε little endian (unsigned 32bit αριθμό)
+    //Reads 4 bytes and converts them to little endian (unsigned 32bit number)
     static int read_u32(unsigned int *out) 
     {
-        unsigned char b[4]; //Δημιουργούμε buffer για 4 bytes για ένα 32-bit αριθμό.
+        unsigned char b[4]; //Create a buffer for 4 bytes for a 32-bit number.
 
         if (read_n(b , 4 ) < 0)
         return -1;
 
-        *out = b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24);        /* Ενώνουμε τα 4 bytes με shift.
-                                                                        Το κάθε byte μετακινείται στη σωστή του θέση:
+        *out = b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24);        /* Combine the 4 bytes by shifting.
+                                                                        Every byte moves to the right spot:
                                                                         b[0] = bits 0–7
                                                                         b[1] = bits 8–15
                                                                         b[2] = bits 16–23
@@ -83,19 +83,19 @@ static int read_byte(void)
         return 0;
     }
 
-static int read_header(void)
+static int read_header(void) 
 {   
-    //Αν δεν βρω RIFF σημαίνει ότι δεν είναι WAV αρχείο επομενως τελειωνει το προγραμμα
+    //If it can't find RIFF it means that it is not a WAV file, τherefore the program ends
     if (read_n(tag4, 4) < 0 || strncmp((char*)tag4, "RIFF", 4) != 0) 
     {
-        if (!header_error) 
+        if (!header_error) //if no error has been recorded beforehand
         {
             header_error = 1;
             strcpy(header_error_msg, "Error! \"RIFF\" not found");
         }
     }
 
-    //Διαβάζω file size για να ξέρω το συνολικο περιεχόμενο μετα το header
+    //Reads file size so that i know the overall content after the header
     if (read_u32(&file_size) < 0)
     {
         if (!header_error) 
@@ -105,7 +105,7 @@ static int read_header(void)
         }
     }
 
-    //Αν λείπει το WAVE τότε το αρχείο δεν είναι έγκυρο
+    //if WAVE is missing then the file is not valid
     if (read_n(tag4, 4) < 0 || strncmp((char*)tag4,"WAVE", 4 ) != 0)
     {
         if (!header_error) 
@@ -114,7 +114,7 @@ static int read_header(void)
             strcpy(header_error_msg, "Error! \"WAVE\" not found");
         }
     }
-    //Να υπάρχει παντα fmt
+    //There should always be fmt
      if (read_n(tag4, 4) < 0 || strncmp((char*)tag4, "fmt ", 4) != 0)
     {
          if (!header_error) 
@@ -124,7 +124,7 @@ static int read_header(void)
         }
     }
 
-    //Το fmt chunk πρέπει να έχει μέγεθος 16 σε απλό PCM if not then corrupted file
+    //ΤThe fmt chunk shall have the size of 16 in a simple PCM, if not then the file is corrupted
     if (read_u32(&fmt_size) < 0) return 0;
     if (fmt_size != 16)
     {
@@ -135,7 +135,7 @@ static int read_header(void)
         }
     }
 
-    //audio_format = 1 σημαίνει uncompressed PCM
+    //audio_format = 1 means uncompressed PCM
     if(read_u16(&audio_format) < 0 ) return 0;
     if(audio_format != 1)
     {
@@ -146,7 +146,7 @@ static int read_header(void)
         }
     }
 
-    //Mono και Stereo ειναι οι μονες επιλογές 
+    //Mono and Stereo are the only options
     if(read_u16(&channels) < 0) return 0;
     if(!(channels == 1 || channels == 2))
     {
@@ -158,7 +158,7 @@ static int read_header(void)
     }
 
 
-    /*must για να ειναι λειτουργικος ο τροπος του rate/channel*/
+    /*must exist for the rate/channel method to be functional*/
     read_u32(&sample_rate);     
     read_u32(&bytes_per_sec);
     read_u16(&block_align);
@@ -174,7 +174,7 @@ static int read_header(void)
     }
 
 
-    //Αν δεν ταιριαζει ο παρακατω τύπος τοτε μαλλον το αρχειο ειναι κατεστραμμενο
+    //If the type below does not match then the file is probably corrupted
     if (bytes_per_sec != sample_rate * block_align)
     {
        if (!header_error) 
@@ -185,7 +185,7 @@ static int read_header(void)
     }
 
 
-    //Ποσα bytes είναι ένα δειγμα ολων των καναλιων
+    //How many bytes is a sample of all channels
 unsigned int expected = (bits_per_sample/8) * channels;
     if(block_align != expected)
     {
@@ -197,7 +197,7 @@ unsigned int expected = (bits_per_sample/8) * channels;
     }
 
 
-    /*Αν δεν υπάρχει data chunk δεν υπαρχουν audio samples*/
+    /*If a data chunk does not exist then there are no audio samples*/
     if (read_n(tag4, 4) < 0 || strncmp((char*)tag4, "data", 4) != 0)
     {
         if (!header_error) 
@@ -207,7 +207,7 @@ unsigned int expected = (bits_per_sample/8) * channels;
         }
     }
 
-    //raw sample data size για rate και channel
+    //raw sample data size for rate and channel
      if (read_u32(&data_size) < 0)
     {
         if (!header_error) 
@@ -220,7 +220,7 @@ unsigned int expected = (bits_per_sample/8) * channels;
 }   
 
 
-// Γράφει 2 bytes σε little endian
+// Writes 2 bytes in little endian
 static void write_u16(unsigned int value)
 {
     unsigned char b[2];
@@ -229,41 +229,41 @@ static void write_u16(unsigned int value)
     fwrite(b, 1, 2, stdout);
 }
 
-// Γράφει 4 bytes σε little endian
+// Writes 4 bytes in little endian
 static void write_u32(unsigned int value)
 
 {
     
-    unsigned char b[4];
+    unsigned char b[4];                //split 32-bit integer into 4 little-endian bytes and write them to WAV output 
     b[0] = value & 0xFF;
     b[1] = (value >> 8) & 0xFF;
     b[2] = (value >> 16) & 0xFF;
     b[3] = (value >> 24) & 0xFF;
-    fwrite(b, 1, 4, stdout);
+    fwrite(b, 1, 4, stdout);    
 }
 static void write_n(unsigned char *buf, int n)
 {
-    fwrite(buf, 1, n, stdout);
+    fwrite(buf, 1, n, stdout); output to WAV file exactly n bytes from buffer 
 }
 static void write_header(void)
 {
-    printf("RIFF");                 //Γραφω το RIFF πρωτο για αναγνώριση του αρχείου
-    write_u32(file_size);           //Το συνολικο μεγεθσο του αρχειου
-    printf("WAVE");                 //Μπαινει μετα το RIFF παντα για να δηλωσει το format
-    printf("fmt ");                 //Απο τι αποτελέιται ο ηχος
-    write_u32(fmt_size);            //Πρέπει να είναι 16 για PCM
+    printf("RIFF");                 //ΓWrite RIFF first to mark the file as a WAV container
+    write_u32(file_size);           //Total file size
+    printf("WAVE");                 //Always comes after RIFF so that it declares the format
+    printf("fmt ");                 //Format chunk that describes the audio format
+    write_u32(fmt_size);            //should be 16 for PCM
     write_u16(audio_format);        /*raw uncompressed audio*/
     write_u16(channels);            //1 = mono , 2 = stereo
-    write_u32(sample_rate);         //Πόσα δειγματα ανα sec αν λαθος τοτε ειναι sped up ή slowed down
+    write_u32(sample_rate);         //How many samples per sec, wrong values means sped up/slowed down audio
     write_u32(bytes_per_sec);       //sample_rate * block_align
-    write_u16(block_align);         //ποσα bytes ειναι ενα audio frame , (channels * bits_per_sample/8)
-    write_u16(bits_per_sample);     //8bit ή 16bit
-    printf("data");                 //δειχνει πως κατω απο αυτο ξεκινανε τα raw samples
-    write_u32(data_size);           //Ποσα bytes ηχου θα ακολουθησουν μετα το header
+    write_u16(block_align);         //Size of one audio frame(bytes) , (channels * bits_per_sample/8)
+    write_u16(bits_per_sample);     //8bit or 16bit
+    printf("data");                 //Indicates that raw audio samples follow after it
+    write_u32(data_size);           //How many bytes of sound will follow after the header 
 }
 
 
-/*ΣΚΕΛΕΤΟΣ*/
+/*SKELETON*/
 int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων από τη γραμμή εντολών 
                                 //    argv = πίνακας συμβολοσειρών που περιέχει τα ορίσματα 
 {
@@ -289,17 +289,17 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
 
          if (header_error) 
         {
-            printf("%s\n", header_error_msg);
+            printf("%s\n", header_error_msg); //if the header had an error, show it now (after printing all info fields)
             return -1;
         }
 
         return 0;
     }
 
-        else if (strcmp(argv[1], "rate") == 0) 
+        else if (strcmp(argv[1], "rate") == 0)  //adjust sample rate by a factor
         {
             //πρεπει να περαστει ενας παραγοντας
-            if(argc < 3)
+            if(argc < 3)    //check if the factor is missing
             {
                 fprintf(stderr, "Missing factor\n");
                     return -1;
@@ -309,10 +309,10 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
 
         if(read_header() < 0) return -1;
 
-            sample_rate = (unsigned int)(sample_rate*factor); //Αυτό πρακτικά κάνει τον hχο πιο γρήγορο ή πιο αργo
+            sample_rate = (unsigned int)(sample_rate*factor); /This makes the sound slower or faster
 
             bytes_per_sec = sample_rate * block_align; //to bytes/sec ειναι αναλογο με το sample rate
-
+            // After modifying the audio (rate/channel), we must update the header fields accordingly.
             file_size = 36 + data_size; //36 byte header + data chunk = new header
 
         write_header(); 
@@ -328,13 +328,13 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
         }
             else if(strcmp(argv[1], "channel") ==0)
             {
-                if (argc < 3 )
+                if (argc < 3 ) //check if the factor is missing
                 {
                     fprintf(stderr,"Missing channel option\n");
                     return -1;
                 }
 
-                //Ελέγχω αν ο χρήστης ζήτησε left ή right.
+                //Checks if user wants left or right
                 int want_left = strcmp(argv[2], "left") == 0;
                 int want_right = strcmp(argv[2], "right") == 0;
 
@@ -350,7 +350,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                     return -1;
                 }
 
-                //Aν το αρχειο ειναι ηδη mono δεν κανω split
+                //If file already is a mono then dont split
                 if (channels == 1)
                 {
                     write_header();
@@ -363,23 +363,24 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                     return 0;
                 }
 
-            unsigned int bps = bits_per_sample / 8;         //Για stereo υπολιγιζω bytes έχει καθε sample
-            unsigned int frames = data_size / (2 * bps);    //Για frames πόσα ζευγάρια left+right υπαρχουν συνολικα
+            /* A frame = one complete set of samples for all channels (left+right in stereo)*/
+            unsigned int bps = bits_per_sample / 8;         //For stereo calculate how many bytes every sample has
+            unsigned int frames = data_size / (2 * bps);    //For frames how many left+right pairs there are in total 
             
 
-            //εδω φτιαχνω νεο mono WAV
+            //Here i create the new Mono WAV
             channels = 1;                                   //mono
             block_align = bps;                              //mono frame = 1 sample*bps
             bytes_per_sec = sample_rate * block_align;      
-            data_size = frames * bps;                       //νεο datasize για ενα καναλι μονο
-            file_size = 36 + data_size;                     //36 bytes header + chunk
+            data_size = frames * bps;                       //new datasize for one channel only
+            file_size = 36 + data_size;                     //36 bytes header + chunk || After modifying the audio (rate/channel), we must update the header fields accordingly.
 
-            //Γραφω το νεο mono header στην εξοδο
+            //I write the new mono header to the output
             write_header();
 
 
-                //εδω γινεται το actual split 
-                //για καθε frame διαβαζω πρωτα lefta μετα right
+                //Here the actual split happens
+                //For every frame i read first left to right
                 for (unsigned int i = 0; i < frames; i++)
                 {
                     read_n(left_buf, bps);
