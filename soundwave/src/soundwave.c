@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
+
 /*--GLOBAL VARIABLES--*/
 unsigned int file_size;
 unsigned int fmt_size;
@@ -120,24 +122,35 @@ static int read_header(void)
          if (!header_error) 
          {
             header_error = 1;
-            strcpy(header_error_msg, "Error! \"fmt\" not found");
+            strcpy(header_error_msg, "Error! \"fmt \" not found");
         }
     }
 
     //ΤThe fmt chunk shall have the size of 16 in a simple PCM, if not then the file is corrupted
-    if (read_u32(&fmt_size) < 0) return 0;
-    if (fmt_size != 16)
+    if (read_u32(&fmt_size) < 0){
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! truncated file");
+        }
+    } else if (fmt_size != 16)
     {
         if (!header_error) 
         {
             header_error = 1;
-            strcpy(header_error_msg, "Error! the size of format chunk should be 16");
+            strcpy(header_error_msg, "Error! size of format chunk should be 16");
         }
     }
+    
 
     //audio_format = 1 means uncompressed PCM
-    if(read_u16(&audio_format) < 0 ) return 0;
-    if(audio_format != 1)
+    if(read_u16(&audio_format) < 0 ){
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! truncated file");
+        }
+    } else if(audio_format != 1)
     {
        if (!header_error) 
        {
@@ -145,10 +158,16 @@ static int read_header(void)
             strcpy(header_error_msg, "Error! WAVE type format should be 1");
         }
     }
+    
 
     //Mono and Stereo are the only options
-    if(read_u16(&channels) < 0) return 0;
-    if(!(channels == 1 || channels == 2))
+    if(read_u16(&channels) < 0){
+        if (!header_error) 
+        {
+            header_error = 1;
+            strcpy(header_error_msg, "Error! truncated file");
+        }
+    } else if(!(channels == 1 || channels == 2))
     {
         if (!header_error) 
         {
@@ -156,7 +175,7 @@ static int read_header(void)
             strcpy(header_error_msg, "Error! mono/stereo should be 1 or 2");
         }
     }
-
+    
 
     /*must exist for the rate/channel method to be functional*/
     read_u32(&sample_rate);     
@@ -243,7 +262,7 @@ static void write_u32(unsigned int value)
 }
 static void write_n(unsigned char *buf, int n)
 {
-    fwrite(buf, 1, n, stdout); output to WAV file exactly n bytes from buffer 
+    fwrite(buf, 1, n, stdout); //output to WAV file exactly n bytes from buffer 
 }
 static void write_header(void)
 {
@@ -289,7 +308,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
 
          if (header_error) 
         {
-            printf("%s\n", header_error_msg); //if the header had an error, show it now (after printing all info fields)
+            fprintf(stderr, "%s\n", header_error_msg); //if the header had an error, show it now (after printing all info fields)
             return -1;
         }
 
@@ -309,7 +328,7 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
 
         if(read_header() < 0) return -1;
 
-            sample_rate = (unsigned int)(sample_rate*factor); /This makes the sound slower or faster
+            sample_rate = (unsigned int)(sample_rate*factor); //This makes the sound slower or faster
 
             bytes_per_sec = sample_rate * block_align; //to bytes/sec ειναι αναλογο με το sample rate
             // After modifying the audio (rate/channel), we must update the header fields accordingly.
