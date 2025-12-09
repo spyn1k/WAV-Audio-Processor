@@ -15,6 +15,9 @@ unsigned int block_align;
 unsigned int bits_per_sample;
 unsigned int data_size;
 
+unsigned long long total_bytes_read; /*To count every single byte read from stdin to verify 
+                                if the file size declared in the header actually matches the real data. */
+
 //Buffers to store raw bytes before converting them because WAV is a binary format
 unsigned char tag4[4];    
 unsigned char tag2[2];
@@ -23,6 +26,7 @@ unsigned char right_buf[4];
 
 int header_error=0; //header error 
 char header_error_msg[128]; //buffer for the header error message
+
 
 /*---READ FUNCTIONS---*/
 
@@ -35,7 +39,7 @@ static int read_byte(void)
         {
             return -1; //value of EOF is -1
         } 
-
+        total_bytes_read++; 
         return c & 0xFF; /* με το & 0xFF κρατάμε μόνο τα χαμηλά 8 bits ώστε να γίνουν 0–255 */
     }
 
@@ -281,6 +285,14 @@ static void write_header(void)
     write_u32(data_size);           //How many bytes of sound will follow after the header 
 }
 
+/*--Helper Function--*/
+//transfer any remaining bytes to output (metadata)
+void copy_rest_of_data(void) {
+    int c;
+    while ((c = read_byte()) != -1) {
+        putchar(c);
+    }
+}
 
 /*SKELETON*/
 int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων από τη γραμμή εντολών 
@@ -289,13 +301,15 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
     if( argc < 2) //Ελεγχος αν δωθει τουλαχιστον ενα ορισμα
     {
         fprintf(stderr, "Usage %s <command>\n", argv[0]); //Μήνυμα χρησης
-        return -1;
+        return 1;
     }
 
     if(strcmp(argv[1], "info") == 0)  //αν δωθει η εντολη info   
     {
-        if (read_header() < 0) return -1;
+        if (read_header() < 0) return 1;
 
+        
+        
         printf("size of file: %u\n", file_size);
         printf("size of format chunk: %u\n", fmt_size);
         printf("WAVE type format: %u\n", audio_format);
@@ -306,10 +320,30 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
         printf("bits/sample: %u\n", bits_per_sample);
         printf("size of data chunk: %u\n", data_size);
 
-         if (header_error) 
+        //fail if total file size does not match RIFF header (Header = Total - 8) after displaying info
+        if (header_error)
         {
-            fprintf(stderr, "%s\n", header_error_msg); //if the header had an error, show it now (after printing all info fields)
-            return -1;
+            fprintf(stderr, "%s\n", header_error_msg); 
+            return 1;
+        }
+
+        //count actual data bytes remaining in the file
+        unsigned int bytes_counted=0;
+        while(read_byte() != -1)
+        {
+            bytes_counted++;
+        }
+        //fail if actual data is less than header claims
+        if (bytes_counted < data_size) 
+        {
+            fprintf(stderr, "Error! insufficient data\n");
+            return 1;
+        }
+
+        if ((total_bytes_read -8) != file_size)
+        {
+            fprintf(stderr, "Error! bad file size (found data past the expected end of file)\n");
+            return 1;
         }
 
         return 0;
@@ -321,12 +355,12 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
             if(argc < 3)    //check if the factor is missing
             {
                 fprintf(stderr, "Missing factor\n");
-                    return -1;
+                    return 1;
             }
             double factor = atof(argv[2]); //για να υποστηρίζει δεκαδικους
         
 
-        if(read_header() < 0) return -1;
+        if(read_header() < 0) return 1;
 
             sample_rate = (unsigned int)(sample_rate*factor); //This makes the sound slower or faster
 
@@ -340,17 +374,20 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
             for (unsigned int i = 0; i < data_size; i++)
             {
                 int c = read_byte();
-                if (c < 0) return -1;
+                if (c < 0) return 1;
 
                 putchar(c);
             }
+
+        copy_rest_of_data(); //Helper function
+
         }
             else if(strcmp(argv[1], "channel") ==0)
             {
                 if (argc < 3 ) //check if the factor is missing
                 {
                     fprintf(stderr,"Missing channel option\n");
-                    return -1;
+                    return 1;
                 }
 
                 //Checks if user wants left or right
@@ -361,12 +398,12 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                 if(!want_left && !want_right)
                 {
                     fprintf(stderr,"Bad channel option\n");
-                    return -1;
+                    return 1;
                 }
 
                 if(read_header() < 0)
                 {
-                    return -1;
+                    return 1;
                 }
 
                 //If file already is a mono then dont split
@@ -376,11 +413,14 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                     for (unsigned int i = 0; i < data_size; i++)
                     {
                         int c = read_byte();
-                        if (c < 0) return -1;
+                        if (c < 0) return 1;
                         putchar(c);
                     }
+                    copy_rest_of_data(); //Helper function
                     return 0;
                 }
+
+                
 
             /* A frame = one complete set of samples for all channels (left+right in stereo)*/
             unsigned int bps = bits_per_sample / 8;         //For stereo calculate how many bytes every sample has
@@ -388,12 +428,13 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
             
 
             //Here i create the new Mono WAV
+            unsigned int old_data_size = data_size;         //Remember old size
             channels = 1;                                   //mono
             block_align = bps;                              //mono frame = 1 sample*bps
-            bytes_per_sec = sample_rate * block_align;      
+            bytes_per_sec = sample_rate * block_align;      //recalculate data size for mono output
             data_size = frames * bps;                       //new datasize for one channel only
-            file_size = 36 + data_size;                     //36 bytes header + chunk || After modifying the audio (rate/channel), we must update the header fields accordingly.
-
+            file_size = file_size - (old_data_size - data_size); //subtract discarded bytes from file_size to preserve metadata
+            
             //I write the new mono header to the output
             write_header();
 
@@ -414,11 +455,12 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
                         write_n(right_buf, bps);
                     }
                 }
+                copy_rest_of_data();
             }   
     else
     {
         fprintf(stderr, "Error! Not a valid command!\n");
-        return -1;
+        return 1;
     }
     return 0;
 }
