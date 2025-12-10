@@ -192,7 +192,7 @@ static int read_header(void)
         if (!header_error) 
         {
             header_error = 1;
-            strcpy(header_error_msg, "Error! bits per sample should be 8 or 16");
+            strcpy(header_error_msg, "Error! bits/sample should be 8 or 16");
         }
     }
 
