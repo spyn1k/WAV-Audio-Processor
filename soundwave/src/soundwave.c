@@ -19,9 +19,10 @@ unsigned long long total_bytes_read; /*To count every single byte read from stdi
                                 if the file size declared in the header actually matches the real data. */
 
 //Buffers to store raw bytes before converting them because WAV is a binary format
+//use unsigned char so byte 0xFF (255) isnt confused with -1 which would break the loops 
 unsigned char tag4[4];    
 unsigned char tag2[2];
-unsigned char left_buf[4];
+unsigned char left_buf[4];  
 unsigned char right_buf[4];
 
 int header_error=0; //header error 
@@ -300,8 +301,8 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
 {
     if( argc < 2) //Ελεγχος αν δωθει τουλαχιστον ενα ορισμα
     {
-        fprintf(stderr, "Usage %s <command>\n", argv[0]); //Μήνυμα χρησης
-        return 1;
+        fprintf(stderr, "Usage %s <command>\n", argv[0]); /*Command , if we used printf the error message would be written into the wav output while using >
+        return 1;                                        creating a corrupted audio file*/
     }
 
     if(strcmp(argv[1], "info") == 0)  //αν δωθει η εντολη info   
@@ -359,14 +360,13 @@ int main(int argc, char **argv)  //   argc = αριθμός ορισμάτων �
             }
             double factor = atof(argv[2]); //για να υποστηρίζει δεκαδικους
         
-
+        //Must check logical errors (like bad bits/sample) before processing
         if(read_header() < 0) return 1;
 
-            sample_rate = (unsigned int)(sample_rate*factor); //This makes the sound slower or faster
+            sample_rate = (unsigned int)(sample_rate*factor); //Change speed by altering sample rate, not the data itself,int because we want interger
 
             bytes_per_sec = sample_rate * block_align; //to bytes/sec ειναι αναλογο με το sample rate
             // After modifying the audio (rate/channel), we must update the header fields accordingly.
-            file_size = 36 + data_size; //36 byte header + data chunk = new header
 
         write_header(); 
 
